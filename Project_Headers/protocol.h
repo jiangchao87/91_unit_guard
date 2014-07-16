@@ -114,7 +114,7 @@ void  prepare_sndarm_pack(uchar rg)
 	
 	Sndbuf[j][0] = 0xf5;	
 	Sndbuf[j][1] = 0x00;							// ≥§∂»
-	Sndbuf[j][2] = 0x00;//pot_a; 
+	Sndbuf[j][2] = 0x00;							//pot_a; 
 	Sndbuf[j][3] = 0x00;
 	Sndbuf[j][4] = 0x00;
 	Sndbuf[j][5] = 0x00;							// ‘§¡Ù
@@ -223,7 +223,7 @@ void  respond2Host(void)
 		
 	rsvover = 0;
 	
-	len = rsvbufm[1];									// F5 F5 08 00 00 00 00 01 01 08 FD
+	len = rsvbufm[1];									//?????????????????? F5 F5 08 00 00 00 00 01 01 08 FD
 	sum = 0;
 	for(i=1;i<len;i++)
 		sum ^= rsvbufm[i];

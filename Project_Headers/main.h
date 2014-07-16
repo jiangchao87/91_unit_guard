@@ -59,6 +59,55 @@ volatile uchar TxTelbuf[5][33],Tel_p,Tel_frm,Tel_BWenNo;		// 发送Sndbuf[5][31]是
 // Sndbuf[x][6]报文序号  Sndbuf[x][27] = 0xfd  Sndbuf[x][snd321]发送的123次数 Sndbuf[x][30]计时200ms  
 
 
+// Touch Key Uart
+volatile uchar p_rx = 0;
+volatile _UBYTE rx_byte = 0xFF;
+volatile uchar rx_readout = 1;
+volatile uchar rx_ready = 0;
+volatile uchar uart1_rx_buff[4];
+volatile uchar key_code[4] = {0};
+
+#define RCV_KEY_1 0x0100
+#define RCV_KEY_2 0x0200
+#define RCV_KEY_3 0x0400
+#define RCV_KEY_4 0x0800
+#define RCV_KEY_5 0x1000
+#define RCV_KEY_6 0x2000
+#define RCV_KEY_7 0x4000
+#define RCV_KEY_8 0x8000
+#define RCV_KEY_9 0x0001
+#define RCV_KEY_0 0x0004
+#define RCV_KEY_CANCEL 0x0002
+#define RCV_KEY_OK 0x0008
+#define RCV_KEY_PASSWORD 0x0080
+#define RCV_KEY_CENTER 0x0010
+#define RCV_KEY_UP 0x0020
+#define RCV_KEY_DOWN 0x0040
+#define RCV_KEY_DUAL 0x000A
+#define RCV_KEY_RELEASE 0x0000
+
+#define UH_KEY_0 0x00
+#define UH_KEY_1 0x01
+#define UH_KEY_2 0x02
+#define UH_KEY_3 0x03
+#define UH_KEY_4 0x04
+#define UH_KEY_5 0x05
+#define UH_KEY_6 0x06
+#define UH_KEY_7 0x07
+#define UH_KEY_8 0x08
+#define UH_KEY_9 0x09
+#define UH_KEY_CANCEL 0x0A
+#define UH_KEY_OK 0x0B
+#define UH_KEY_PASSWORD 0x0C
+#define UH_KEY_CENTER 0x0D
+#define UH_KEY_UP 0x0E
+#define UH_KEY_DOWN 0x0F
+#define UH_KEY_DUAL 0x10
+#define UH_KEY_RELEASE 0x11
+
+
+
+
 
 
 #define		_PIN_TE_RX	 			PTFD_PTFD0 		// 与电话模块通信，输入

@@ -191,11 +191,13 @@ void reset_host(void)
 	//volstate.change_times = MAX_CHANGE_VOL_TIMES + 3;
 	volume_dwq_to(Volv_lvel[6][0]);
 	
+	
  	SCI1C2_TE = 0; 						// 关闭电话通讯
-	SCI1C2_RE = 0; 
+ 	SCI1C2_RE = 1; 
 	
  	SCI2C2_TE = 1;                                                                       
-	SCI2C2_RE = 1;  	
+	SCI2C2_RE = 1;  
+	
 }
 
 //=========================================================================
@@ -248,9 +250,9 @@ void sfrInit()
 	(void)(SCI1S1 == 0);				 /* Dummy read of the SCIS1 register to clear flags */
 	(void)(SCI1D == 0);					 /* Dummy read of the SCI2D register to clear flags */
 	SCI1S2 = 0x00; 
-    SCI1BD = 104; 			       		//52--19200 BD
+    SCI1BD = 104; 			       		//104--9600 BD
     SCI1C1 = 0X00;
-	SCI1C2 = 0X2C;						// TIE TCIE RIE ILIE, TE RE RW SBK
+	SCI1C2 = 0X2C;						// TIE TCIE RIE=1 ILIE, TE=1 RE=1 RW SBK
     SCI1C3 = 0X00;  
  
 	//SCI2 串口2
@@ -258,9 +260,9 @@ void sfrInit()
 	(void)(SCI2S1 == 0);
 	(void)(SCI2D == 0);
 	SCI2S2 = 0x00; 
-    SCI2BD = 104;        				//52--19200 BD
+    SCI2BD = 104;        				//104--9600 BD
     SCI2C1 = 0X00;
-	SCI2C2 = 0X2C;
+	SCI2C2 = 0X2C;						// TIE TCIE RIE=1 ILIE, TE=1 RE=1 RW SBK
     SCI2C3 = 0X00;    
 	
 	//ADC
@@ -336,12 +338,24 @@ void sfrInit()
 void interrupt 14 T2(void)
 {
 	//_UBYTE i;
-	TPM2SC &= 0X7F;						//read tpm2sc first,then write it
-    TPM2MOD = 0X03E7;
+	TPM2SC &= 0x7F;						//clear Timer overflow flag
+    TPM2MOD = 0x03E7;					//Timer = 999
 
 	time_counter.delay1ms < 2000? time_counter.delay1ms++:0;
 	
 	ms10++;								// 10ms 
+	
+/*
+	TPM2SC &= 0x7F;						//clear Timer overflow flag
+    TPM2MOD = 0x03E7;					//Timer = 999
+
+	udelay++;
+	if(udelay == 1000)
+		mdelay++;
+	if(mdelay == 1000)
+		sdelay++;
+	
+*/
 }
 
 
@@ -355,56 +369,35 @@ void interrupt 16 SCI1_ERROR(void)
 }
   
 
-// 串口1接收 ------- 电话
+
+// 串口1接收 
 interrupt 17 void SCI1_R(void)
 { 
-	//__uart1_receive__();
-	_UBYTE  rsls = 0;	
-	SCI1S1 &= 0xDF; 								// TDRE TC RDRF IDLE OR NF FE PF
-	rsls = SCI1D;
-	if(RxTelov>0)
+	/* CY8C22545-24AXI send data to mc9s08ac60 via UART1*/
+	/* RX data saved in uart1_rxbuff[] */ 
+
+	SCI1S1 &= 0xDF;
+	if((rx_ready == 1)&&(rx_readout == 0))
 		return;
-	
-	if(rsls==0xf5)
+	if((p_rx < 4) && (rx_ready == 0))
 	{
-		if(RxTelf5bz>0)
-			RxTel_p = 0;							// 指针归零
-		RxTelf5bz = 1;
+		rx_byte = SCI1D;
+	    uart1_rx_buff[p_rx++] = rx_byte;
+	    rx_ready = 0;
 	}
-	else
-		RxTelf5bz = 0;
-	
-	if(RxTel_p<30)
+	if(p_rx == 4)
 	{
-		RxTelbufi[RxTel_p] = rsls;	
-		if(RxTel_p<32)
-			RxTel_p++;
+	    p_rx = 0;
+	    rx_readout = 0;
+	    rx_ready = 1;
 	}
-	if( (RxTelbufi[1]+2)==RxTel_p)					// F5 F5 08 00 00 00 00 14 57 4B FD 
-		RxTelov = 1; 
+	return;
 }
 
-// 串口1发送 ------- 电话
-interrupt 18 void SCI1_T(void)
-{ 
-	// __uart1_trance__();	
-	uchar i;
-	SCI1S1 &= 0xBF; 								// TDRE TC RDRF IDLE OR NF FE PF
-	i = TxTelbuf[Tel_frm][1];
-	if(Tel_p<=i+1)									// F5 F5 08 00 00 00 00 01 01 08 FD
-	{
-		SCI1D = TxTelbuf[Tel_frm][Tel_p];	
-		Tel_p++;
-	}
-	else
-	{ 
-		SCI1C2_TE = 0;
-		SCI1C2_TCIE = 0;
-		Tel_p = 0; 
-		Tel_frm = 10;								// 表示可以处理下一个帧		
-		_PIN_AW60_UART_EN = 0;						// 485 转为接收
-	} 
-}
+// 串口1发送 
+//interrupt 18 void SCI1_T(void)
+//{ 
+//}
 
 //SCI2 interrupt service function 
 interrupt 19 void SCI2_ERROR(void)
@@ -424,24 +417,24 @@ interrupt 20 void SCI2_R(void)
 	SCI2S1 &= 0xDF;									// TDRE TC RDRF IDLE OR NF FE PF
 	
 	rsls = SCI2D;
-	if(rsvover>0)
+	if(rsvover>0)									//receive done rsvover = 1
 		return;
-	if(rsls==0xf5)
+	if(rsls==0xf5)									//data header double 0xF5
 	{
 		if(headf5bz>0)
 			rsv_p = 0;								// 指针归零
-		headf5bz = 1; 
+		headf5bz = 1; 								//data header 0xF5 flag headf5bz = 1
 	}
 	else
 		headf5bz = 0;
 	
 	if(rsv_p<30)
 	{
-		rsvbufi[rsv_p] = rsls;
+		rsvbufi[rsv_p] = rsls;						//data body 
 		rsv_p++;
 	}
-	if( (rsvbufi[1]+2)==rsv_p )
-		rsvover = 1;
+	if( (rsvbufi[1]+2)==rsv_p )						//data length = rsvbuffi[1]+2(header)
+		rsvover = 1;								//receive done
 }
 
 // 串口2发送  ------- Arm
@@ -463,41 +456,121 @@ interrupt 21 void SCI2_T(void)
 		snd_frm = 10;								// 表示可以处理下一个帧		
 	} 
 }
- 
+
+
+static unsigned char calculate_check_sum(int len,unsigned char* buf)
+{
+	unsigned char check_sum = 0;
+	int i;
+	for(i = 0; i < len; i++)
+	{
+		check_sum += buf[i];
+	}
+	return check_sum;
+}
+
+
+int send_key_value(uchar key_value)
+{
+	key_vl = key_value;
+	if( (key_vl>0))
+	{
+		prepare_sndarm_pack(Key_4);						//save key value to SCI1 send buffer
+		key_vlBF = key_vl;
+		return 0;
+	}
+	else
+		return -1;
+}
  
 void  key_do(void)
 {
-	uchar  k;
-	k = 0;	
-	//if(!PIN_JJ)									// 紧急
-	//	k = 1;
-	if(!PIN_TH)										// 通话
-		k = 2;
-	//if(!PIN_KM)									// 开门
-	//	k = 3;
-	//if(!PIN_WC)									// 外出
-	//	k = 4;
-
-	if(k==0)										// 没有任何按键按下
+	uint temp_key = 0;
+	uchar key_value = 0;
+	//uchar key_code[4] = {0};
+	
+	if(rx_ready)
 	{
-		if(key_tup<200)
-			key_tup++;								// 没有键按下  计时加1
-		key_td = 0;
-		if(key_tup==4)
-		{
-			if(key_vl>0)
-				key_vl |= 0x10;
-		}
+		memcpy(key_code,uart1_rx_buff,4);
+		memset(uart1_rx_buff,0,4);
+		rx_readout = 1;
+		rx_ready = 0;
 	}
-	else											// 有键按下
+	else
 	{
-		key_tup = 0;
-		if(key_td<200)
-			key_td++;
-		if(key_td==4)
-			key_vl = k;
+		rx_readout = 0;
+		return;													//memory copy failed
+	}
+	if((key_code[0] != 0x5A)||
+		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
+		return;													//invalid data
+	else
+	{
+		temp_key = key_code[1]<<8;
+		temp_key = temp_key | key_code[2];
+		switch (temp_key)
+		{
+			case RCV_KEY_DUAL:
+				key_value = UH_KEY_DUAL;
+				break;
+			case RCV_KEY_0:
+				key_value = UH_KEY_0;
+				break;
+			case RCV_KEY_1:
+				key_value = UH_KEY_1;
+				break;
+			case RCV_KEY_2:
+				key_value = UH_KEY_2;
+				break;
+			case RCV_KEY_3:
+				key_value = UH_KEY_3;
+				break;
+			case RCV_KEY_4:
+				key_value = UH_KEY_4;
+				break;
+			case RCV_KEY_5:
+				key_value = UH_KEY_5;
+				break;
+			case RCV_KEY_6:
+				key_value = UH_KEY_6;
+				break;
+			case RCV_KEY_7:
+				key_value = UH_KEY_7;
+				break;
+			case RCV_KEY_8:
+				key_value = UH_KEY_8;
+				break;
+			case RCV_KEY_9:
+				key_value = UH_KEY_9;
+				break;
+			case RCV_KEY_UP:
+				key_value = UH_KEY_UP;
+				break;
+			case RCV_KEY_DOWN:
+				key_value = UH_KEY_DOWN;
+				break;
+			case RCV_KEY_CANCEL:
+				key_value = UH_KEY_CANCEL;
+				break;
+			case RCV_KEY_OK:
+				key_value = UH_KEY_OK;
+				break;
+			case RCV_KEY_CENTER:
+				key_value = UH_KEY_CENTER;
+				break;
+			case RCV_KEY_PASSWORD:
+				key_value = UH_KEY_PASSWORD;
+				break;
+			default:
+				key_value = UH_KEY_RELEASE;
+				break;
+		}
+		if(send_key_value(key_value) != 0)
+			return;						//invalid key or error!
 	}
 }
+
+
 //======================================================================================
 //======================================================================================
 //======================================================================================
@@ -533,13 +606,8 @@ void main(void)
 	Sndbuf[0][8] = 0x59;
 	Sndbuf[0][9] = 0xfd;
 	
-	TxTelbuf[0][0] = 0xf5;
-	TxTelbuf[0][1] = 0x08;                    
-	TxTelbuf[0][2] = 0x00;
-	TxTelbuf[0][5] = 0x00;
-	Tel_p = 0;
 	
-	volume_dwq_to(Volv_lvel[6][0]);
+	volume_dwq_to(Volv_lvel[6][0]);						//set default volume
 	
 	// _PIN_REL_ALL = 1;
 	fsyc = 0;											// 刚上电 发送一次串口数据
@@ -547,33 +615,20 @@ void main(void)
 	
 	for(;;) 
 	{  
-		__RESET_WATCHDOG(); 							// feeds the dog   看门狗 要 测试一下 
+		__RESET_WATCHDOG(); 								// feeds the dog   看门狗 要 测试一下 
        
-		//TxTelbuf[0][3] = rsv_p;						//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		//TxTelbuf[0][4] = rsvover;
-		//for(m0=0;m0<15;m0++)
-		//	TxTelbuf[0][m0+6] = rsvbufi[m0]; 			//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		//TxTelbuf[0][2] = TxTelbuf[0][snd321];
-		//TxTelbuf[0][3] = TxTelbuf[1][snd321];
-		//TxTelbuf[0][4] = Tel_frm;
-		//TxTelbuf[0][5] = TxTelbuf[0][snd200ms];		// 预留
-		
-		if(ms10>=10)									// 10 ms
+
+
+		if(ms10>=10)										// 10 ms
 		{
 			ms10 = 0;
 			//if(tel_2s<250)								// 2秒内收到arm拨号只拨1次
 			//	tel_2s++;
 			// Sndbuf[x][6]报文序号  Sndbuf[x][27] = 0xfd  Sndbuf[x][snd321]发送的123次数 Sndbuf[x][snd200ms]计时200ms  
+	
+			key_do();										// 按键处理	
 			
-			key_do();									// 按键处理
-			if( (key_vl>0)&&(key_vlBF != key_vl) )
-			{
-				prepare_sndarm_pack(Key_4);				// 有键按下 发送键值
-				key_vlBF = key_vl;
-			}
-			
-			
-			for(m0=0;m0<5;m0++)						// 发送时基
+			for(m0=0;m0<5;m0++)								// 发送时基
 			{
 				if(Sndbuf[m0][snd200ms]<250)
 					Sndbuf[m0][snd200ms]++;
@@ -587,18 +642,9 @@ void main(void)
 			
 			sec1s++; 
 			if(sec1s>=100)								// 1s                              
-			{
-				//_PIN_LED_TX = !_PIN_LED_TX;
-				//_PIN_LED_MR = !_PIN_LED_MR;
-	  			//_PIN_LED_JJAF = !_PIN_LED_JJAF;			//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				
-				
+			{				
 				sec1s = 0;                       
 				min60m++;
-				
-				// _PIN_LED_AF = !_PIN_LED_AF;
-				
-				// get_current_time();					// 读1302时间
 				
 				
 				if(min60m>60)                       
@@ -611,24 +657,6 @@ void main(void)
 					agn_int7037t = 0;
 					init7037(); 						// 初始化回声 消除芯片					
 				}
-				
-				/*if(fsyc==0)                                   
-				{
-					fsyc = 1; 
-					
-					SCI2C2_TE = 1;	   					// 使能串口  TIE TCIE RIE ILIE TE RE RWU
-					SCI2C2_TCIE = 1;					// 传送结束 中断使能 
-					snd_frm = 0; 
-					snd_p = 0; 
-					SCI2D = 0xaa;		  				// pChar[ (*pPos)++ ];	 
-					
-					
-					SCI1C2_TE = 1;	   					// 使能串口  TIE TCIE RIE ILIE TE RE RWU
-					SCI1C2_TCIE = 1;					// 传送结束 中断使能
-					Tel_p = 0; 							// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-					Tel_frm = 0;						// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%		
-					SCI1D = 0xbb;	
-				}*/
 				
 				if(rst_3s<200)							// 上点3秒 重起arm一次
 					rst_3s++;
@@ -657,7 +685,7 @@ void main(void)
 		}  
 		
 		read_afkey();									// 读安防接口的状态 
-		read_Krst_scrn();								// 复位和校准屏幕
+		//read_Krst_scrn();								// 复位和校准屏幕
 		
 		check_change();									// 检查温度 安防等数据是否有变化
 		
