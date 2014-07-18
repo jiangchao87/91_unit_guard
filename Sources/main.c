@@ -158,21 +158,21 @@ void  led_operate( void)
 
 
 //=========================================================================
-// 复位Arm  reset the host 
+// 复位ARM  reset the host 
 void reset_host(void)
 {
 	_UBYTE i; 
 	
-	//SCI1C2_TE = 0;                               	//transmission disbale
-	//SCI1C2_RE = 0;                                //receiving disable
+	SCI1C2_TE = 0;                               	// Disable Uart1 TX
+	SCI1C2_RE = 0;                                  // Disable Uart1 RX
 
-	//SCI2C2_TE = 0;                                //transmission disbale
-	//SCI2C2_RE = 0;                                //receiving disable
+	SCI2C2_TE = 0;                                	// Disable Uart2 TX
+	SCI2C2_RE = 0;                               	// Disable Uart2 RX
 
-	for( i =0; i < 2; i++)                        	// RL_STATE_NUMBER
+	for( i = 0; i < 2; i++)                        	// RL_STATE_NUMBER
 		INIT_LIST_HEAD( &receive_list[i]);
 
-	for( i =0; i < SL_STATE_NUMBER; i++) 
+	for( i = 0; i < SL_STATE_NUMBER; i++) 
 		INIT_LIST_HEAD( &send_list[i]); 
 
 	// TPM2SC_TOIE=0;
@@ -189,14 +189,14 @@ void reset_host(void)
 
 	
 	//volstate.change_times = MAX_CHANGE_VOL_TIMES + 3;
-	volume_dwq_to(Volv_lvel[6][0]);
+	volume_dwq_to(Volv_lvel[6][0]);					// Set default volume
 	
 	
- 	SCI1C2_TE = 0; 						// 关闭电话通讯
- 	SCI1C2_RE = 1; 
+ 	SCI1C2_TE = 0; 									// Disable Uart1 TX
+ 	SCI1C2_RE = 1; 									// Enable Uart1 RX
 	
- 	SCI2C2_TE = 1;                                                                       
-	SCI2C2_RE = 1;  
+ 	SCI2C2_TE = 1;                            		// Enable Uart2 TX                                          
+	SCI2C2_RE = 1;  								// Enable Uart2 RX
 	
 }
 
@@ -223,12 +223,13 @@ void reset_arm(void)
 	_PIN_RESET_51 = _STATE_51_RESET;				// 0
 }
 
+
 //================================================================================
 // 寄存器初始化
 void sfrInit() 
 {                        
 	//enable watchdog
-   	SOPT = 0XD3;						// 1101 0011
+   	SOPT = 0XD3;									// 1101 0011
 	//SPM
     SPMSC1 = 0X40;      
    	SPMSC2 = 0X30;          
@@ -245,31 +246,31 @@ void sfrInit()
 		__RESET_WATCHDOG();
 	}					        		//FLL LOCKED
 	
-	//SCI1  串口1                        
+	//SCI1  Uart1                        
 	SCI1C2 = 0x00;
-	(void)(SCI1S1 == 0);				 /* Dummy read of the SCIS1 register to clear flags */
-	(void)(SCI1D == 0);					 /* Dummy read of the SCI2D register to clear flags */
+	(void)(SCI1S1 == 0);				 /* Dummy read of the SCI1S1 register to clear flags */
+	(void)(SCI1D == 0);					 /* Dummy read of the SCI1D register to clear flags */
 	SCI1S2 = 0x00; 
-    SCI1BD = 104; 			       		//104--9600 BD
+    SCI1BD = 104; 			       		// 104 --- Baudrate = 9600
     SCI1C1 = 0X00;
-	SCI1C2 = 0X2C;						// TIE TCIE RIE=1 ILIE, TE=1 RE=1 RW SBK
+	SCI1C2 = 0X2C;						// TIE=0 TCIE=0 RIE=1 ILIE=0, TE=1 RE=1 RW=0 SBK=0
     SCI1C3 = 0X00;  
  
-	//SCI2 串口2
+	//SCI2 Uart2
 	SCI2C2 = 0x00;
-	(void)(SCI2S1 == 0);
-	(void)(SCI2D == 0);
+	(void)(SCI2S1 == 0);				/* Dummy read of the SCI2S1 register to clear flags */
+	(void)(SCI2D == 0);					/* Dummy read of the SCI2D register to clear flags */
 	SCI2S2 = 0x00; 
-    SCI2BD = 104;        				//104--9600 BD
+    SCI2BD = 104;        				// 104 --- Baudrate = 9600
     SCI2C1 = 0X00;
-	SCI2C2 = 0X2C;						// TIE TCIE RIE=1 ILIE, TE=1 RE=1 RW SBK
+	SCI2C2 = 0X2C;						// TIE=0 TCIE=0 RIE=1 ILIE=0, TE=1 RE=1 RW=0 SBK=0
     SCI2C3 = 0X00;    
 	
 	//ADC
 	APCTL1 = 0X00;
 	APCTL2 = 0X40;						//enable channel 14
 	
-	//	APCTL3 = 0X00;
+	//APCTL3 = 0X00;
     ADC1CFG = 0X38;
 	ADC1SC2 = 0X00;
 	ADC1SC1 = 0X1F;
@@ -337,25 +338,12 @@ void sfrInit()
 // 定时器中断  1毫秒
 void interrupt 14 T2(void)
 {
-	//_UBYTE i;
 	TPM2SC &= 0x7F;						//clear Timer overflow flag
     TPM2MOD = 0x03E7;					//Timer = 999
 
 	time_counter.delay1ms < 2000? time_counter.delay1ms++:0;
 	
 	ms10++;								// 10ms 
-	
-/*
-	TPM2SC &= 0x7F;						//clear Timer overflow flag
-    TPM2MOD = 0x03E7;					//Timer = 999
-
-	udelay++;
-	if(udelay == 1000)
-		mdelay++;
-	if(mdelay == 1000)
-		sdelay++;
-	
-*/
 }
 
 
@@ -371,18 +359,17 @@ void interrupt 16 SCI1_ERROR(void)
 
 
 // 串口1接收 
-interrupt 17 void SCI1_R(void)
+interrupt 17 void SCI1_Rx(void)
 { 
 	/* CY8C22545-24AXI send data to mc9s08ac60 via UART1*/
 	/* RX data saved in uart1_rxbuff[] */ 
 
 	SCI1S1 &= 0xDF;
-	if((rx_ready == 1)&&(rx_readout == 0))
+	if(rx_ready && !rx_readout)
 		return;
-	if((p_rx < 4) && (rx_ready == 0))
+	if((p_rx < 4) && !rx_ready)
 	{
-		rx_byte = SCI1D;
-	    uart1_rx_buff[p_rx++] = rx_byte;
+	    uart1_rx_buff[p_rx++] = SCI1D;
 	    rx_ready = 0;
 	}
 	if(p_rx == 4)
@@ -408,10 +395,9 @@ interrupt 19 void SCI2_ERROR(void)
 } 
 
 
-
 //==================================================
-// 串口2接收 ------- Arm
-interrupt 20 void SCI2_R(void)
+// 串口2接收 ------- from ARM
+interrupt 20 void SCI2_Rx(void)
 {
 	_UBYTE  rsls = 0;	
 	SCI2S1 &= 0xDF;									// TDRE TC RDRF IDLE OR NF FE PF
@@ -437,8 +423,9 @@ interrupt 20 void SCI2_R(void)
 		rsvover = 1;								//receive done
 }
 
-// 串口2发送  ------- Arm
-interrupt 21 void SCI2_T(void)
+
+// 串口2发送  ------- to ARM
+interrupt 21 void SCI2_Tx(void)
 {
 	uchar i;
 	SCI2S1 &= 0xBF;									// TDRE TC RDRF IDLE OR NF FE PF
@@ -469,27 +456,10 @@ static unsigned char calculate_check_sum(int len,unsigned char* buf)
 	return check_sum;
 }
 
-
-int send_key_value(uchar key_value)
-{
-	key_vl = key_value;
-	if( (key_vl>0))
-	{
-		prepare_sndarm_pack(Key_4);						//save key value to SCI1 send buffer
-		key_vlBF = key_vl;
-		return 0;
-	}
-	else
-		return -1;
-}
  
 void  key_do(void)
 {
-	uint temp_key = 0;
-	uchar key_value = 0;
-	//uchar key_code[4] = {0};
-	
-	if(rx_ready)
+	if(rx_ready&&!rx_readout)
 	{
 		memcpy(key_code,uart1_rx_buff,4);
 		memset(uart1_rx_buff,0,4);
@@ -501,72 +471,15 @@ void  key_do(void)
 		rx_readout = 0;
 		return;													//memory copy failed
 	}
+	
 	if((key_code[0] != 0x5A)||
 		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
 		return;													//invalid data
 	else
 	{
-		temp_key = key_code[1]<<8;
-		temp_key = temp_key | key_code[2];
-		switch (temp_key)
-		{
-			case RCV_KEY_DUAL:
-				key_value = UH_KEY_DUAL;
-				break;
-			case RCV_KEY_0:
-				key_value = UH_KEY_0;
-				break;
-			case RCV_KEY_1:
-				key_value = UH_KEY_1;
-				break;
-			case RCV_KEY_2:
-				key_value = UH_KEY_2;
-				break;
-			case RCV_KEY_3:
-				key_value = UH_KEY_3;
-				break;
-			case RCV_KEY_4:
-				key_value = UH_KEY_4;
-				break;
-			case RCV_KEY_5:
-				key_value = UH_KEY_5;
-				break;
-			case RCV_KEY_6:
-				key_value = UH_KEY_6;
-				break;
-			case RCV_KEY_7:
-				key_value = UH_KEY_7;
-				break;
-			case RCV_KEY_8:
-				key_value = UH_KEY_8;
-				break;
-			case RCV_KEY_9:
-				key_value = UH_KEY_9;
-				break;
-			case RCV_KEY_UP:
-				key_value = UH_KEY_UP;
-				break;
-			case RCV_KEY_DOWN:
-				key_value = UH_KEY_DOWN;
-				break;
-			case RCV_KEY_CANCEL:
-				key_value = UH_KEY_CANCEL;
-				break;
-			case RCV_KEY_OK:
-				key_value = UH_KEY_OK;
-				break;
-			case RCV_KEY_CENTER:
-				key_value = UH_KEY_CENTER;
-				break;
-			case RCV_KEY_PASSWORD:
-				key_value = UH_KEY_PASSWORD;
-				break;
-			default:
-				key_value = UH_KEY_RELEASE;
-				break;
-		}
-		if(send_key_value(key_value) != 0)
-			return;						//invalid key or error!
+		key_value = (key_code[1]<<8) | key_code[2];
+		prepare_sndarm_pack(TOUCH_KEY);							//save key value to send buffer
+		last_key_value = key_value;
 	}
 }
 
@@ -578,20 +491,15 @@ void main(void)
 {
  	uchar m0; 
 	
- 	//unsigned int mi;
-	EnableInterrupts; 								// enable interrupts  
-	// include your code here  
-	//asm ("fclr I");								//disable the response of MCU
-	DisableInterrupts;        
+	DisableInterrupts;        							// disable the response of MCU
 	
-	sfrInit();										// 初始化cpu
+	sfrInit();											// 初始化MCU的SFR
 	
-	EnableInterrupts;
-	//asm ("fset I");           					//enable the response of MCU
-
-	reset_host();									// 初始化配置自己的cpu
+	EnableInterrupts;									//enable the response of MCU
 	
-	init7037(); 									// 初始化回声 消除芯片
+	reset_host();										// 初始化配置自己的cpu
+	
+	init7037(); 										// 初始化回声 消除芯片
 	
 	
 	// F5 F5 08 00 00 00 00 01 01 08 FD
@@ -599,72 +507,76 @@ void main(void)
 	Tel_frm = 10;
 	
 	// F5 F5 08 00 00 00 00 04 55 59 FD  挂机
-	Sndbuf[0][0] = 0xf5;
+	Sndbuf[0][0] = 0xF5;
 	Sndbuf[0][1] = 0x08;
 	Sndbuf[0][6] = 0x04;
 	Sndbuf[0][7] = 0x55;
 	Sndbuf[0][8] = 0x59;
-	Sndbuf[0][9] = 0xfd;
+	Sndbuf[0][9] = 0xFD;
 	
+	TxTelbuf[0][0] = 0xF5;
+	TxTelbuf[0][1] = 0x08;                    
+	TxTelbuf[0][2] = 0x00;
+	TxTelbuf[0][5] = 0x00;
+	Tel_p = 0;
 	
-	volume_dwq_to(Volv_lvel[6][0]);						//set default volume
+	volume_dwq_to(Volv_lvel[6][0]);							// set default volume
 	
-	// _PIN_REL_ALL = 1;
-	fsyc = 0;											// 刚上电 发送一次串口数据
+	fsyc = 0;												// 刚上电 发送一次串口数据
 	rst_3s = 0;
 	
 	for(;;) 
 	{  
-		__RESET_WATCHDOG(); 								// feeds the dog   看门狗 要 测试一下 
+		__RESET_WATCHDOG(); 								// feeds the dog   看门狗要测试一下 
        
-
-
-		if(ms10>=10)										// 10 ms
+		key_do();											// 按键处理
+		
+		if(ms10 >= 10)										// 10 ms
 		{
 			ms10 = 0;
-			//if(tel_2s<250)								// 2秒内收到arm拨号只拨1次
-			//	tel_2s++;
-			// Sndbuf[x][6]报文序号  Sndbuf[x][27] = 0xfd  Sndbuf[x][snd321]发送的123次数 Sndbuf[x][snd200ms]计时200ms  
 	
 			key_do();										// 按键处理	
 			
-			for(m0=0;m0<5;m0++)								// 发送时基
+			for(m0 = 0;m0 < 5;m0++)							// 发送时基
 			{
 				if(Sndbuf[m0][snd200ms]<250)
 					Sndbuf[m0][snd200ms]++;
 				if(TxTelbuf[m0][snd200ms]<250)          
 					TxTelbuf[m0][snd200ms]++;
 			}
+			
 			if(timebase<100)
-				timebase++;								// led指示灯闪烁时基 
+				timebase++;									// led指示灯闪烁时基 
 			else
 				timebase = 0;            
 			
 			sec1s++; 
-			if(sec1s>=100)								// 1s                              
+			if(sec1s>=100)									// 1s                              
 			{				
 				sec1s = 0;                       
 				min60m++;
 				
 				
 				if(min60m>60)                       
-					min60m = 0;                           
+					min60m = 0;
+				
 				
 				if(agn_int7037t>0)
 					agn_int7037t--;						// 初始化7037失败，10秒后重新初始化
 				if(agn_int7037t==1)
 				{
 					agn_int7037t = 0;
-					init7037(); 						// 初始化回声 消除芯片					
+					init7037(); 						// 初始化回声消除芯片					
 				}
 				
-				if(rst_3s<200)							// 上点3秒 重起arm一次
+				
+				if(rst_3s<200)							// 上电3秒 重起arm一次
 					rst_3s++;
 				rst_armt++;				
-				if( (rst_armt%15)==0 )					// 收不到arm数据后每60秒
+				if((rst_armt%15) == 0)					// 收不到arm数据后每60秒
 				{
 					prepare_sndarm_pack(Safe_ztai);		// 报告一次安防状态
-					// init7037(); 						// 初始化回声 消除芯片  %%%%%%%%%%%%%% ，每15秒初始化一次7037 测试初始化函数用，正常要屏蔽
+					//init7037(); 						// 初始化回声 消除芯片 ，每15秒初始化一次7037 测试初始化函数用，正常要屏蔽
 				}
 				if(rst_armt>=80)						// 收不到arm数据表示arm不正常 重新启动
 				{
@@ -685,7 +597,7 @@ void main(void)
 		}  
 		
 		read_afkey();									// 读安防接口的状态 
-		//read_Krst_scrn();								// 复位和校准屏幕
+		read_Krst_scrn();								// 复位和校准屏幕
 		
 		check_change();									// 检查温度 安防等数据是否有变化
 		

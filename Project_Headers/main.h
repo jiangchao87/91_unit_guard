@@ -9,8 +9,8 @@ uchar  rst_3s;
 uchar  fsyc;
 unsigned int uuuu;
 
-uchar  timebase,ms10,sec1s,min60m;						// 
-uchar  key_vl,key_vlBF,key_tup,key_td;					// 按键
+uchar  timebase,ms10,sec1s,min60m;
+//uchar  key_vl,key_vlBF,key_tup,key_td;					// 按键
 #define SL_STATE_NUMBER	3
 
 enum  RL_state{received=0, rl_empty=1};				// R 接收  状态  0已经收到  1空
@@ -27,10 +27,10 @@ uchar  volume,volumeBF;									// 声音
 
 uchar  pwer_t;											// 电源按键按下1秒    
 uint   rst_armt;										// 5分钟没有收到arm数据
-uchar  SD_sec,SD_min,SD_hour,SD_day,SD_mth,SD_year;	// 时钟1302
+uchar  SD_sec,SD_min,SD_hour,SD_day,SD_mth,SD_year;		// 时钟1302
 uchar  T1302_year,T1302_mth,T1302_week,T1302_day,T1302_hour,T1302_min,T1302_sec;
 
-uchar  safe_zt[8],safe_bf[8],pot_a,pa_sm_t;			// 安防状态
+uchar  safe_zt[8],safe_bf[8],pot_a,pa_sm_t;				// 安防状态
 uchar  safe_jj,safe_jjbf,safe_jtm,safe_jbz;
 
 uchar  kScr_hlbz;										// 校准屏目
@@ -41,7 +41,7 @@ uchar  rut_zt,tlphn_zt;									// 线路状态 电话分机状态
 uchar  ledzt[8],Rlayzt[8];								// led指示灯状态 继电器状态
 
 uchar  Telarm[20],Telmdl[20];							// 电话号码缓冲区 [0]存长度
-uchar  Dtmfarm[20],Dtmfmdl[20];						// Dtmf号码缓冲区
+uchar  Dtmfarm[20],Dtmfmdl[20];							// Dtmf号码缓冲区
 
 uchar  bw_armbf,bw_telbf;								// 
 //--------------------------------------------------------
@@ -59,14 +59,20 @@ volatile uchar TxTelbuf[5][33],Tel_p,Tel_frm,Tel_BWenNo;		// 发送Sndbuf[5][31]是
 // Sndbuf[x][6]报文序号  Sndbuf[x][27] = 0xfd  Sndbuf[x][snd321]发送的123次数 Sndbuf[x][30]计时200ms  
 
 
-// Touch Key Uart
+// Touch Key Uart1
+
+
 volatile uchar p_rx = 0;
-volatile _UBYTE rx_byte = 0xFF;
 volatile uchar rx_readout = 1;
 volatile uchar rx_ready = 0;
 volatile uchar uart1_rx_buff[4];
 volatile uchar key_code[4] = {0};
+volatile uint key_value = 0xFFFF;
+volatile uint last_key_value = 0xFFFF;
 
+#define TOUCH_KEY 0x19
+
+#define RCV_KEY_RELEASE 0x0000
 #define RCV_KEY_1 0x0100
 #define RCV_KEY_2 0x0200
 #define RCV_KEY_3 0x0400
@@ -84,30 +90,6 @@ volatile uchar key_code[4] = {0};
 #define RCV_KEY_UP 0x0020
 #define RCV_KEY_DOWN 0x0040
 #define RCV_KEY_DUAL 0x000A
-#define RCV_KEY_RELEASE 0x0000
-
-#define UH_KEY_0 0x00
-#define UH_KEY_1 0x01
-#define UH_KEY_2 0x02
-#define UH_KEY_3 0x03
-#define UH_KEY_4 0x04
-#define UH_KEY_5 0x05
-#define UH_KEY_6 0x06
-#define UH_KEY_7 0x07
-#define UH_KEY_8 0x08
-#define UH_KEY_9 0x09
-#define UH_KEY_CANCEL 0x0A
-#define UH_KEY_OK 0x0B
-#define UH_KEY_PASSWORD 0x0C
-#define UH_KEY_CENTER 0x0D
-#define UH_KEY_UP 0x0E
-#define UH_KEY_DOWN 0x0F
-#define UH_KEY_DUAL 0x10
-#define UH_KEY_RELEASE 0x11
-
-
-
-
 
 
 #define		_PIN_TE_RX	 			PTFD_PTFD0 		// 与电话模块通信，输入

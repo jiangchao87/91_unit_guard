@@ -83,7 +83,7 @@ void  send2host(void)
 				snd_frm = i; 
 				snd_p = 0;
 				
-				SCI2D = 0xf5;		  			// pChar[ (*pPos)++ ];		
+				SCI2D = 0xF5;		  			// pChar[ (*pPos)++ ];		
 				return;
 			}
 		}
@@ -112,12 +112,12 @@ void  prepare_sndarm_pack(uchar rg)
 	if(j==10)										// 所有发送缓冲区都满
 		return;
 	
-	Sndbuf[j][0] = 0xf5;	
-	Sndbuf[j][1] = 0x00;							// 长度
-	Sndbuf[j][2] = 0x00;							//pot_a; 
-	Sndbuf[j][3] = 0x00;
-	Sndbuf[j][4] = 0x00;
-	Sndbuf[j][5] = 0x00;							// 预留
+	Sndbuf[j][0] = 0xF5;							// header
+	Sndbuf[j][1] = 0x00;							// length
+	Sndbuf[j][2] = 0x00;							// reserved
+	Sndbuf[j][3] = 0x00;							// reserved
+	Sndbuf[j][4] = 0x00;							// reserved
+	Sndbuf[j][5] = 0x00;							// reserved
 	snd_BWenNo++;
 	if(snd_BWenNo==0)
 		snd_BWenNo = 1;
@@ -128,7 +128,7 @@ void  prepare_sndarm_pack(uchar rg)
 	{
 		case  Answer_zt:            				// 查询返回 
 			Sndbuf[j][1] = 0x1B;					// 长度
-			Sndbuf[j][6] = rsv_ack;				// 收到的arm的序号
+			Sndbuf[j][6] = rsv_ack;					// 收到的arm的序号
 			Sndbuf[j][8] = rut_zt;					// 线路状态
 			Sndbuf[j][9] = ad_tmp;					// 室内温度
 			Sndbuf[j][10] = tlphn_zt;				// 电话分机状态 
@@ -157,7 +157,7 @@ void  prepare_sndarm_pack(uchar rg)
 		
 		case ACK_slvtx:								// ACK
 			Sndbuf[j][1] = 0x09;	
-			Sndbuf[j][6] = rsv_ack;				// 收到的arm的序号
+			Sndbuf[j][6] = rsv_ack;					// 收到的arm的序号
 			Sndbuf[j][8] = 2;						// 2表示错误
 			Sndbuf[j][snd321] = 1;					// 可以发送1次
 			break; 
@@ -177,11 +177,10 @@ void  prepare_sndarm_pack(uchar rg)
 			Sndbuf[j][snd321] = 3;					// 可以发送3次
 			break;
 		
-		case Key_4:
-			Sndbuf[j][1] = 0x0a;
-			Sndbuf[j][8] = key_vl>>4;
-			if(key_vl>0)
-				Sndbuf[j][9] = key_vl&0x0f; 
+		case TOUCH_KEY:
+			Sndbuf[j][1] = 0x0A;					// length = (4+1+1+2+1+1)=10
+			Sndbuf[j][8] = key_code[1];				// MSB
+			Sndbuf[j][9] = key_code[2]; 			// LSB
 			Sndbuf[j][snd321] = 3;					// 可以发送3次			
 			break;
 	}
@@ -189,7 +188,7 @@ void  prepare_sndarm_pack(uchar rg)
 	{ 
 		Sndbuf[j][snd200ms] = 240;					// 随时可以发送
 		sum = 0;
-		for(i=1;i<Sndbuf[j][1];i++)				// F5 F5 08 00 00 00 00 01 01 08 FD
+		for(i=1;i<Sndbuf[j][1];i++)					// F5 F5 08 00 00 00 00 01 01 08 FD
 			sum ^= Sndbuf[j][i];
 		i = Sndbuf[j][1];
 		Sndbuf[j][i] = sum;
@@ -223,14 +222,14 @@ void  respond2Host(void)
 		
 	rsvover = 0;
 	
-	len = rsvbufm[1];									//?????????????????? F5 F5 08 00 00 00 00 01 01 08 FD
+	len = rsvbufm[1];									// F5 F5 08 00 00 00 00 01 01 08 FD
 	sum = 0;
 	for(i=1;i<len;i++)
 		sum ^= rsvbufm[i];
 	if( (sum!=rsvbufm[len])||(rsvbufm[len+1]!=0xfd) )
 		return;
 	
-	if(bw_armbf==rsvbufm[6])							// 保温序号相同的不处理
+	if(bw_armbf==rsvbufm[6])							// 报文序号相同的不处理
 		return;
 	bw_armbf = rsvbufm[6];
 	

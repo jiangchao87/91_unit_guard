@@ -7,16 +7,18 @@
 
 // 引脚定义
 #define	 _PIN_PDN_7037		PTBD_PTBD7  			// 7037 下电脚 输入电平0有效
-
 #define	 _PIN_DEN_7037		PTED_PTED4				// 
 #define	 _PIN_EXCK_7037		PTED_PTED7				// 
 #define	 _PIN_DIN_7037		PTED_PTED5				// 
 #define	 _PIN_DOUT_7037		PTED_PTED6				// 
 
- 
-
 #define	 _7037_DATA_ENABLE_		0			// 引脚=0才可以操作7037
 #define	 _7037_DATA_DISABLE		1
+
+
+uchar _7037_ready_to_access = 0;
+uchar _7037_ready_to_operate = 0;
+
 
 // 
 typedef struct
@@ -294,25 +296,26 @@ _SBYTE WRC7037byte( _ML7037_REG_ * pML7037REG, _UBYTE count)
 // 初始化 7037 
 void init7037(void)
 {
-	_PIN_DEN_7037	=	_7037_DATA_DISABLE;        		// = 1   引脚=1不才可以操作7037      
+	_PIN_DEN_7037	=	_7037_DATA_DISABLE;        		// DEN active low    
 	
-	_PIN_PDN_7037	=	0;                              // PDN_7037输入高电平       
-	NopDelay(200);
-	_PIN_PDN_7037	=	1;               				// PDN_7037输入低电平   reset 7037
-	//NopDelay(200);		
+	_PIN_PDN_7037	=	0;                              // 7037 power down mode
+	NopDelay(200);										// > 1us
+	_PIN_PDN_7037	=	1;
+	//NopDelay(200);
 	time_counter.delay1ms = 0;
 	while(time_counter.delay1ms<1000)
 	{
 		__RESET_WATCHDOG();
 	}
 	
-	_PIN_PDN_7037	=	0;								// PDN_7037输入高电平  
+	_PIN_PDN_7037	=	0;								// PDN_7037输入低电平  
 	time_counter.delay1ms = 0;
 	while(time_counter.delay1ms<1000)
 	{
 		__RESET_WATCHDOG();
-	} 
-
+	}
+	
+	_7037_ready_to_access = read7037byte(ADDRESS_ML7037_CR10);
 
 	time_counter.delay1ms = 0;
 	while( ( read7037byte(ADDRESS_ML7037_CR10)!=0x80 ) && (time_counter.delay1ms<500) )
@@ -332,61 +335,18 @@ void init7037(void)
 	{
 		__RESET_WATCHDOG();
 	}
+	
+	_7037_ready_to_operate = read7037byte(ADDRESS_ML7037_CR10);
+	
 	if(time_counter.delay1ms>495)
 		agn_int7037t = 10;								// 初始化7037失败，10秒后重新初始化
 }
 
-/*
-// 初始化 7037 
-void init7037____(void)
-{
-
-	_PIN_DEN_7037	=	_7037_DATA_DISABLE;        		// = 1   引脚=1不才可以操作7037      
-	
-	_PIN_PDN_7037	=	0;                              // PDN_7037输入高电平       
-	NopDelay(200);
-	
-	_PIN_PDN_7037	=	1;               				// PDN_7037输入低电平   reset 7037
-	//NopDelay(200);		
-	delay1ms = 0;
-	while(delay1ms<1000) 
-	{
-		clear_watch_dog(); 
-	}
-	
-	_PIN_PDN_7037	=	0;								// PDN_7037输入高电平  
-	delay1ms = 0;
-	while(delay1ms<1000) 
-	{
-		clear_watch_dog(); 
-	}
-
-	delay1ms = 0;
-	while( ( read7037byte(ADDRESS_ML7037_CR10)!=0x80 ) && (delay1ms<500) )
-	{
-		clear_watch_dog(); 
-	}
-	if(delay1ms>495)
-		agn_int7037t = 10;								// 初始化7037失败，10秒后重新初始化
-	
-	if( WRC7037byte(regs1_7037, sizeof(regs1_7037)/sizeof(_ML7037_REG_) ) != 0 )
-	{     												// 大概 14
-		;//writing and reading check        
-	}
-
-	delay1ms = 0;
-	while( (read7037byte(ADDRESS_ML7037_CR10)!=0) && (delay1ms < 500) )
-	{
-		clear_watch_dog();  
-	}
-	if(delay1ms>495)
-		agn_int7037t = 10;								// 初始化7037失败，10秒后重新初始化
-}         */
 
 // 下电7037 
 void power_down7037(void)
 {
-	_PIN_DEN_7037 = _7037_DATA_DISABLE;					// = 1   引脚=1不才可以操作7037
+	_PIN_DEN_7037 = _7037_DATA_DISABLE;					// = 1   引脚=1才可以操作7037
 	
 	_PIN_PDN_7037 = 1;									// PDN_7037输入低电平  
 	_PIN_EXCK_7037= 0;
