@@ -75,7 +75,7 @@ void  send2host(void)
 		{
 			if(Sndbuf[i][snd200ms]>20)
 			{
-				SCI2C2_TE = 1;	   				// 使能串口  TIE TCIE RIE ILIE TE RE RWU
+				SCI2C2_TE = 1;	   				// 使能串口
 				SCI2C2_TCIE = 1;				// 传送结束 中断使能
 				
 				Sndbuf[i][snd321]--;

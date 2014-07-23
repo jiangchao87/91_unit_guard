@@ -1,6 +1,3 @@
-
-// 2014 0410 增加通话按键 PG5不可用，可能板子问题  PG3可用，调试OK
-
 #include <hidef.h> 			/* for EnableInterrupts macro */
 #include "derivative.h" 	/* include peripheral declarations */
 
@@ -12,6 +9,7 @@
 #include	"typedefine.h"			//        
 #include	"ML7037.h"				// 
 #include	"protocol.h"			// 
+#include	"uart.h"				// 
 
 #include	"key.h"					//                               
 //#include	"cstartdef.h" 			//        
@@ -54,7 +52,7 @@ void volume_increment( _UBYTE  vol)
 
 // 降低音量   数字电位器   CS=1时 UD下降沿
 // @vol:actual parameter of this function is the volume differences 
- void volume_decrement( _UBYTE  vol)
+void volume_decrement( _UBYTE  vol)
  {                                                                                 
 	_UBYTE i;							// 当UD=0时  CS下降沿
     
@@ -246,27 +244,9 @@ void sfrInit()
 		__RESET_WATCHDOG();
 	}					        		//FLL LOCKED
 	
-	//SCI1  Uart1                        
-	SCI1C2 = 0x00;
-	(void)(SCI1S1 == 0);				 /* Dummy read of the SCI1S1 register to clear flags */
-	(void)(SCI1D == 0);					 /* Dummy read of the SCI1D register to clear flags */
-	SCI1S2 = 0x00; 
-    SCI1BD = 104; 			       		// 104 --- Baudrate = 9600
-    SCI1C1 = 0X00;
-	SCI1C2 = 0X2C;						// TIE=0 TCIE=0 RIE=1 ILIE=0, TE=1 RE=1 RW=0 SBK=0
-    SCI1C3 = 0X00;  
- 
-	//SCI2 Uart2
-	SCI2C2 = 0x00;
-	(void)(SCI2S1 == 0);				/* Dummy read of the SCI2S1 register to clear flags */
-	(void)(SCI2D == 0);					/* Dummy read of the SCI2D register to clear flags */
-	SCI2S2 = 0x00; 
-    SCI2BD = 104;        				// 104 --- Baudrate = 9600
-    SCI2C1 = 0X00;
-	SCI2C2 = 0X2C;						// TIE=0 TCIE=0 RIE=1 ILIE=0, TE=1 RE=1 RW=0 SBK=0
-    SCI2C3 = 0X00;    
-	
-	//ADC
+  	uart_init();
+  	
+  	//ADC
 	APCTL1 = 0X00;
 	APCTL2 = 0X40;						//enable channel 14
 	
@@ -355,36 +335,6 @@ void interrupt 16 SCI1_ERROR(void)
 	i = SCI1S1;
 	return;
 }
-  
-
-
-// 串口1接收 
-interrupt 17 void SCI1_Rx(void)
-{ 
-	/* CY8C22545-24AXI send data to mc9s08ac60 via UART1*/
-	/* RX data saved in uart1_rxbuff[] */ 
-
-	SCI1S1 &= 0xDF;
-	if(rx_ready && !rx_readout)
-		return;
-	if((p_rx < 4) && !rx_ready)
-	{
-	    uart1_rx_buff[p_rx++] = SCI1D;
-	    rx_ready = 0;
-	}
-	if(p_rx == 4)
-	{
-	    p_rx = 0;
-	    rx_readout = 0;
-	    rx_ready = 1;
-	}
-	return;
-}
-
-// 串口1发送 
-//interrupt 18 void SCI1_T(void)
-//{ 
-//}
 
 //SCI2 interrupt service function 
 interrupt 19 void SCI2_ERROR(void)
@@ -484,6 +434,24 @@ void  key_do(void)
 }
 
 
+
+void  key_loop(void)
+{
+	memset(key_code,0,4);
+	if(uart_ngetc(&key_code[0],4) == 0xFF)
+		return;
+	
+	if((key_code[0] != 0x5A)||
+		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
+		return;													//invalid data
+	else
+	{
+		key_value = (key_code[1]<<8) | key_code[2];
+		prepare_sndarm_pack(TOUCH_KEY);							//save key value to send buffer
+		last_key_value = key_value;
+	}
+}
+
 //======================================================================================
 //======================================================================================
 //======================================================================================
@@ -495,11 +463,11 @@ void main(void)
 	
 	sfrInit();											// 初始化MCU的SFR
 	
-	EnableInterrupts;									//enable the response of MCU
+	EnableInterrupts;			 						// enable the response of MCU
 	
 	reset_host();										// 初始化配置自己的cpu
 	
-	init7037(); 										// 初始化回声 消除芯片
+	init7037(); 										// 初始化回声消除芯片ML7037
 	
 	
 	// F5 F5 08 00 00 00 00 01 01 08 FD
@@ -514,11 +482,6 @@ void main(void)
 	Sndbuf[0][8] = 0x59;
 	Sndbuf[0][9] = 0xFD;
 	
-	TxTelbuf[0][0] = 0xF5;
-	TxTelbuf[0][1] = 0x08;                    
-	TxTelbuf[0][2] = 0x00;
-	TxTelbuf[0][5] = 0x00;
-	Tel_p = 0;
 	
 	volume_dwq_to(Volv_lvel[6][0]);							// set default volume
 	
@@ -528,21 +491,17 @@ void main(void)
 	for(;;) 
 	{  
 		__RESET_WATCHDOG(); 								// feeds the dog   看门狗要测试一下 
-       
-		key_do();											// 按键处理
 		
 		if(ms10 >= 10)										// 10 ms
 		{
 			ms10 = 0;
 	
-			key_do();										// 按键处理	
+			key_loop();										// 按键处理	
 			
 			for(m0 = 0;m0 < 5;m0++)							// 发送时基
 			{
 				if(Sndbuf[m0][snd200ms]<250)
 					Sndbuf[m0][snd200ms]++;
-				if(TxTelbuf[m0][snd200ms]<250)          
-					TxTelbuf[m0][snd200ms]++;
 			}
 			
 			if(timebase<100)
@@ -556,10 +515,8 @@ void main(void)
 				sec1s = 0;                       
 				min60m++;
 				
-				
 				if(min60m>60)                       
 					min60m = 0;
-				
 				
 				if(agn_int7037t>0)
 					agn_int7037t--;						// 初始化7037失败，10秒后重新初始化
