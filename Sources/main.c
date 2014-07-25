@@ -437,8 +437,15 @@ void  key_do(void)
 
 void  key_loop(void)
 {
-	memset(key_code,0,4);
-	if(uart_ngetc(&key_code[0],4) == 0xFF)
+	
+	memset(&key_code[0],0,4);
+	
+	if(uart_available() >=4)
+	{
+		if(uart_ngetc(&key_code[0],4) == 0xFF)
+			return;
+	}
+	else
 		return;
 	
 	if((key_code[0] != 0x5A)||
@@ -446,6 +453,9 @@ void  key_loop(void)
 		return;													//invalid data
 	else
 	{
+		if((key_code[0] == 0x5A)&&(key_code[1] == 0x00)
+				&&(key_code[2] == 0x00)&&(key_code[3] == 0x00))
+			return;												//ignore key release event
 		key_value = (key_code[1]<<8) | key_code[2];
 		prepare_sndarm_pack(TOUCH_KEY);							//save key value to send buffer
 		last_key_value = key_value;
@@ -551,7 +561,7 @@ void main(void)
 					reset_arm();						// 复位arm		
 				} 
             }        
-		}  
+		}
 		
 		read_afkey();									// 读安防接口的状态 
 		read_Krst_scrn();								// 复位和校准屏幕
