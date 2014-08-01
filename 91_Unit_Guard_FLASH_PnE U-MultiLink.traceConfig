@@ -53,7 +53,7 @@
 					<Name>General config</Name>
 					<StringAttribute>
 						<Name>Launch config name</Name>
-						<DefaultValue>91_Unit_Guard_FLASH_PnE Full Chip Simulator</DefaultValue>
+						<DefaultValue>test_ARM_Multilink</DefaultValue>
 					</StringAttribute>
 					<StringAttribute>
 						<Name>Config path</Name>
@@ -99,7 +99,7 @@
 					</EnumAttribute>
 					<BoolAttribute>
 						<Name>TriggerBreak</Name>
-						<DefaultValue>false</DefaultValue>
+						<DefaultValue>true</DefaultValue>
 					</BoolAttribute>
 					<BoolAttribute>
 						<Name>TriggerHit</Name>
@@ -120,7 +120,7 @@
 					</BoolAttribute>
 					<UInt32Attribute>
 						<Name>DataBusValue</Name>
-						<DefaultValue>4294967295</DefaultValue>
+						<DefaultValue>0</DefaultValue>
 					</UInt32Attribute>
 					<Addr32Attribute>
 						<Name>PC</Name>
@@ -373,7 +373,7 @@
 								</UInt32Attribute>
 								<EnumAttribute>
 									<Name>Value</Name>
-									<DefaultValue>TRG_A_ONLY</DefaultValue>
+									<DefaultValue>NO_TRIGGER</DefaultValue>
 									<EnumValues>TRG_A_ONLY,TRG_A_OR_B,TRG_A_THEN_B,TRG_EVENT_ONLY_B,TRG_A_THEN_EVENT_ONLY_B,TRG_A_AND_DATA_B,TRG_A_AND_NOT_DATA_B,TRG_INSIDE_RANGE,TRG_OUTSIDE_RANGE,NO_TRIGGER</EnumValues>
 								</EnumAttribute>
 							</ConfigBlock>
