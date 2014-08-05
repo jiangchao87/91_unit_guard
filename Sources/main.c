@@ -406,7 +406,7 @@ static unsigned char calculate_check_sum(int len,unsigned char* buf)
 	return check_sum;
 }
 
- 
+
 void  key_do(void)
 {
 	if(rx_ready&&!rx_readout)

@@ -15,11 +15,6 @@
 #define	 _7037_DATA_ENABLE_		0			// 引脚=0才可以操作7037
 #define	 _7037_DATA_DISABLE		1
 
-
-uchar _7037_ready_to_access = 0;
-uchar _7037_ready_to_operate = 0;
-
-
 // 
 typedef struct
 {
@@ -313,9 +308,8 @@ void init7037(void)
 	while(time_counter.delay1ms<1000)
 	{
 		__RESET_WATCHDOG();
-	}
-	
-	_7037_ready_to_access = read7037byte(ADDRESS_ML7037_CR10);
+	} 
+
 
 	time_counter.delay1ms = 0;
 	while( ( read7037byte(ADDRESS_ML7037_CR10)!=0x80 ) && (time_counter.delay1ms<500) )
@@ -335,9 +329,6 @@ void init7037(void)
 	{
 		__RESET_WATCHDOG();
 	}
-	
-	_7037_ready_to_operate = read7037byte(ADDRESS_ML7037_CR10);
-	
 	if(time_counter.delay1ms>495)
 		agn_int7037t = 10;								// 初始化7037失败，10秒后重新初始化
 }
