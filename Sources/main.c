@@ -345,56 +345,6 @@ interrupt 19 void SCI2_ERROR(void)
 } 
 
 
-//==================================================
-// 串口2接收 ------- from ARM
-interrupt 20 void SCI2_Rx(void)
-{
-	_UBYTE  rsls = 0;	
-	SCI2S1 &= 0xDF;									// TDRE TC RDRF IDLE OR NF FE PF
-	
-	rsls = SCI2D;
-	if(rsvover>0)									//receive done rsvover = 1
-		return;
-	if(rsls==0xf5)									//data header double 0xF5
-	{
-		if(headf5bz>0)
-			rsv_p = 0;								// 指针归零
-		headf5bz = 1; 								//data header 0xF5 flag headf5bz = 1
-	}
-	else
-		headf5bz = 0;
-	
-	if(rsv_p<30)
-	{
-		rsvbufi[rsv_p] = rsls;						//data body 
-		rsv_p++;
-	}
-	if( (rsvbufi[1]+2)==rsv_p )						//data length = rsvbuffi[1]+2(header)
-		rsvover = 1;								//receive done
-}
-
-
-// 串口2发送  ------- to ARM
-interrupt 21 void SCI2_Tx(void)
-{
-	uchar i;
-	SCI2S1 &= 0xBF;									// TDRE TC RDRF IDLE OR NF FE PF
-	i = Sndbuf[snd_frm][1];
-	if(snd_p<=i+1)									// F5 F5 08 00 00 00 00 01 01 08 FD
-	{
-		SCI2D = Sndbuf[snd_frm][snd_p];	
-		snd_p++;
-	}
-	else
-	{ 
-		SCI2C2_TE = 0;
-		SCI2C2_TCIE = 0;
-		snd_p = 0; 
-		snd_frm = 10;								// 表示可以处理下一个帧		
-	} 
-}
-
-
 static unsigned char calculate_check_sum(int len,unsigned char* buf)
 {
 	unsigned char check_sum = 0;
@@ -405,34 +355,6 @@ static unsigned char calculate_check_sum(int len,unsigned char* buf)
 	}
 	return check_sum;
 }
-
-
-void  key_do(void)
-{
-	if(rx_ready&&!rx_readout)
-	{
-		memcpy(key_code,uart1_rx_buff,4);
-		memset(uart1_rx_buff,0,4);
-		rx_readout = 1;
-		rx_ready = 0;
-	}
-	else
-	{
-		rx_readout = 0;
-		return;													//memory copy failed
-	}
-	
-	if((key_code[0] != 0x5A)||
-		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
-		return;													//invalid data
-	else
-	{
-		key_value = (key_code[1]<<8) | key_code[2];
-		prepare_sndarm_pack(TOUCH_KEY);							//save key value to send buffer
-		last_key_value = key_value;
-	}
-}
-
 
 
 void  key_loop(void)
@@ -461,6 +383,35 @@ void  key_loop(void)
 		last_key_value = key_value;
 	}
 }
+
+void key_package_warp(void)
+{
+	unsigned char i,sum;
+	
+	memset(key_code,0,4);
+	
+	if(uart_ngetc(&key_code[0],4) == 0xFF)
+		return;
+	
+	if((key_code[0] != 0x5A)||
+		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
+		return;													//invalid data
+	else
+	{
+		key_value = (key_code[1]<<8) | key_code[2];
+		key_package[9] = key_code[1];
+		key_package[10] = key_code[2];
+		
+		sum = 0;
+		for(i=2;i<11;i++)
+			sum ^= key_package[i];
+		key_package[11] = sum;
+	}
+}
+
+
+
+
 
 //======================================================================================
 //======================================================================================
@@ -491,6 +442,15 @@ void main(void)
 	Sndbuf[0][7] = 0x55;
 	Sndbuf[0][8] = 0x59;
 	Sndbuf[0][9] = 0xFD;
+	
+	
+	// 0xF5 0xF5 0x0A 0x00 0x00 0x00 0x00 0x01 0x19 0x00 0x00 0x00 0xFD
+	key_package[0] = 0xF5;					// header
+	key_package[1] = 0xF5;					// header
+	key_package[2] = 0x0A;					// length
+	key_package[7] = 0x01;					// number
+	key_package[8] = 0x19;					// cmd
+	key_package[12] = 0xFD;					// tailer
 	
 	
 	volume_dwq_to(Volv_lvel[6][0]);							// set default volume
@@ -561,7 +521,9 @@ void main(void)
 					reset_arm();						// 复位arm		
 				} 
             }        
-		}
+		}  
+		
+		uart_send(2);
 		
 		read_afkey();									// 读安防接口的状态 
 		read_Krst_scrn();								// 复位和校准屏幕

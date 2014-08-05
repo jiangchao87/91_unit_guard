@@ -69,6 +69,9 @@ volatile uchar uart1_rx_buff[4];
 volatile uchar key_code[4] = {0};
 volatile uint key_value = 0xFFFF;
 volatile uint last_key_value = 0xFFFF;
+unsigned char uart2_send_ret;
+unsigned char key_package[13] = {0};
+
 
 #define TOUCH_KEY 0x19
 

@@ -102,12 +102,13 @@ extern unsigned char uart_ngetc(unsigned char *dest, unsigned char len);
 extern void uart_putc(unsigned char data);
 
 
+
 /**
  *  @brief   non-block Put byte to ringbuffer for transmitting via UART
  *  @param   data byte to be transmitted
  *  @return  none
  */
-extern void uart_nputc(unsigned char data);
+extern unsigned char uart_nputc(unsigned char *source, unsigned char len);
 
 
 /**
@@ -170,21 +171,21 @@ extern void uart_flush(void);
 
 
 /** @brief  Initialize USART1 (only available on selected ATmegas) @see uart_init */
-extern void uart1_init(unsigned int baudrate);
+extern void uart2_init(unsigned int baudrate);
 /** @brief  Get received byte of USART1 from ringbuffer. (only available on selected ATmega) @see uart_getc */
-extern unsigned int uart1_getc(void);
+extern unsigned int uart2_getc(void);
 /** @brief  Put byte to ringbuffer for transmitting via USART1 (only available on selected ATmega) @see uart_putc */
-extern void uart1_putc(unsigned char data);
+extern void uart2_putc(unsigned char data);
 /** @brief  Put string to ringbuffer for transmitting via USART1 (only available on selected ATmega) @see uart_puts */
-extern void uart1_puts(const char *s );
+extern void uart2_puts(const char *s );
 /** @brief  Put string from program memory to ringbuffer for transmitting via USART1 (only available on selected ATmega) @see uart_puts_p */
-extern void uart1_puts_p(const char *s );
+extern void uart2_puts_p(const char *s );
 /** @brief  Macro to automatically put a string constant into program memory */
-#define uart1_puts_P(__s)       uart1_puts_p(PSTR(__s))
+#define uart2_puts_P(__s)       uart2_puts_p(PSTR(__s))
 /** @brief   Return number of bytes waiting in the receive buffer */
-extern int uart1_available(void);
+extern int uart2_available(void);
 /** @brief   Flush bytes waiting in receive buffer */
-extern void uart1_flush(void);
+extern void uart2_flush(void);
 
 /**@}*/
 
