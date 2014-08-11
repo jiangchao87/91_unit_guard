@@ -387,7 +387,7 @@ interrupt 21 void SCI2_Tx(void)
 	}
 	else
 	{ 
-		SCI2C2_TE = 0;
+		//SCI2C2_TE = 0;
 		SCI2C2_TCIE = 0;
 		snd_p = 0; 
 		snd_frm = 10;								// 表示可以处理下一个帧		
@@ -409,30 +409,20 @@ static unsigned char calculate_check_sum(int len,unsigned char* buf)
 
 void  key_do(void)
 {
-	if(rx_ready&&!rx_readout)
-	{
-		memcpy(key_code,uart1_rx_buff,4);
-		memset(uart1_rx_buff,0,4);
-		rx_readout = 1;
-		rx_ready = 0;
-	}
-	else
-	{
-		rx_readout = 0;
-		return;													//memory copy failed
-	}
-	
-	if((key_code[0] != 0x5A)||
-		(calculate_check_sum(2,&key_code[1]) != key_code[3]))
-		return;													//invalid data
-	else
-	{
-		key_value = (key_code[1]<<8) | key_code[2];
-		prepare_sndarm_pack(TOUCH_KEY);							//save key value to send buffer
-		last_key_value = key_value;
+	if (!PIN_TH){
+		key_status = 1;										//key down
+		key_value = 0x0002;
+		key_timer++;
+	} else {
+		key_status = 0;										//key up
+		if (key_timer >= 4){								//key down time >= 40ms
+			key_value = 0x0002;								//key up,but we only send key down event to ARM 
+			prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key value to send buffer
+			last_key_value = key_value;
+			key_timer = 0;
+		}
 	}
 }
-
 
 
 void  key_loop(void)
@@ -440,7 +430,7 @@ void  key_loop(void)
 	
 	memset(&key_code[0],0,4);
 	
-	if(uart_available() >=4)
+	if(uart_available() >= 4)
 	{
 		if(uart_ngetc(&key_code[0],4) == 0xFF)
 			return;
@@ -506,7 +496,8 @@ void main(void)
 		{
 			ms10 = 0;
 	
-			key_loop();										// 按键处理	
+			//key_do();										// 按键处理
+			key_loop();										// 按键处理
 			
 			for(m0 = 0;m0 < 5;m0++)							// 发送时基
 			{

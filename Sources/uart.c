@@ -37,7 +37,6 @@ static volatile unsigned char UART_TxTail;
 static volatile unsigned char UART_RxHead;
 static volatile unsigned char UART_RxTail;
 static volatile unsigned char UART_LastRxError;
-static volatile unsigned char uart_frame_length;
 
 
 UART1_RECEIVE_INTERRUPT
@@ -55,7 +54,6 @@ Purpose:  called when the UART has received a character
     /* read UART status register and UART data register */
     usr  = SCI1S1;
     data = SCI1D;
-    uart_frame_length++;
 
     /* */
     lastRxError = (usr & 0x0F);
@@ -110,7 +108,6 @@ void uart_init(void)
     UART_TxTail = 0;
     UART_RxHead = 0;
     UART_RxTail = 0;
-    uart_frame_length = 0;
 
 
 	/* Uart1 */
@@ -183,26 +180,22 @@ unsigned char uart_ngetc(unsigned char *dest, unsigned char len)
 	unsigned char i;
 	unsigned int temp;
 	
-	if(uart_frame_length%4 == 0)
+	for(i=0;i<len;i++)
 	{
-		for(i=0;i<len;i++)
-		{
-			temp = uart_getc();
+		temp = uart_getc();
 			
-			if(temp == UART2_NO_DATA)
-				return 0xFF;
+		if(temp == UART_NO_DATA)
+			return 0xFF;
 			
-			if((i==0)&&((temp & 0x00FF) != 0x005A))
-				return 0xFF;
+		if((i==0)&&((temp & 0x00FF) != 0x005A))
+			return 0xFF;
 			
-			if(!(temp & 0xFF00))
-				*(dest++) = (temp & 0x00FF);
-			else
-				return 0xFF;
-		}
+		if(!(temp & 0xFF00))
+			*(dest++) = (temp & 0x00FF);
+		else
+			return 0xFF;
 	}
-	else
-		return 0xFF;							//frame is not over
+
 }/* uart_ngetc */
 
 

@@ -69,7 +69,10 @@ volatile uchar uart1_rx_buff[4];
 volatile uchar key_code[4] = {0};
 volatile uint key_value = 0xFFFF;
 volatile uint last_key_value = 0xFFFF;
+volatile uchar key_timer = 0;
+volatile uchar key_status = 0;
 
+#define TOUCH_FOUR_KEY 0x18
 #define TOUCH_KEY 0x19
 
 #define RCV_KEY_RELEASE 0x0000
