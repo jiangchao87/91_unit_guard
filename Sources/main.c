@@ -164,8 +164,8 @@ void reset_host(void)
 	SCI1C2_TE = 0;                               	// Disable Uart1 TX
 	SCI1C2_RE = 0;                                  // Disable Uart1 RX
 
-	SCI2C2_TE = 0;                                	// Disable Uart2 TX
-	SCI2C2_RE = 0;                               	// Disable Uart2 RX
+	//SCI2C2_TE = 0;                                	// Disable Uart2 TX
+	//SCI2C2_RE = 0;                               	// Disable Uart2 RX
 
 	for( i = 0; i < 2; i++)                        	// RL_STATE_NUMBER
 		INIT_LIST_HEAD( &receive_list[i]);
@@ -387,7 +387,7 @@ interrupt 21 void SCI2_Tx(void)
 	}
 	else
 	{ 
-		//SCI2C2_TE = 0;
+		SCI2C2_TE = 0;
 		SCI2C2_TCIE = 0;
 		snd_p = 0; 
 		snd_frm = 10;								// 表示可以处理下一个帧		
@@ -411,13 +411,19 @@ void  key_do(void)
 {
 	if (!PIN_TH){
 		key_status = 1;										//key down
-		key_value = 0x0002;
 		key_timer++;
+		if (key_timer >= 4){								//key down time >= 40ms
+			key_value = 0x0002;
+			prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key down value to send buffer
+			last_key_value = key_value;
+			key_timer = 0;
+		}
+			
 	} else {
 		key_status = 0;										//key up
-		if (key_timer >= 4){								//key down time >= 40ms
-			key_value = 0x0002;								//key up,but we only send key down event to ARM 
-			prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key value to send buffer
+		if (last_key_value == 0x0002){						//
+			key_value = 0x0102;								//key up
+			prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key up value to send buffer
 			last_key_value = key_value;
 			key_timer = 0;
 		}
