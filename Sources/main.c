@@ -164,7 +164,7 @@ void reset_host(void)
 	SCI1C2_TE = 0;                               	// Disable Uart1 TX
 	SCI1C2_RE = 0;                                  // Disable Uart1 RX
 
-	//SCI2C2_TE = 0;                                	// Disable Uart2 TX
+	//SCI2C2_TE = 0;                                // Disable Uart2 TX
 	//SCI2C2_RE = 0;                               	// Disable Uart2 RX
 
 	for( i = 0; i < 2; i++)                        	// RL_STATE_NUMBER
