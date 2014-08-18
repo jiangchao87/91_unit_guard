@@ -82,7 +82,7 @@ volatile uchar key_status = 0;
 #define RCV_KEY_4 0x0080
 #define RCV_KEY_5 0x0040
 #define RCV_KEY_6 0x0200
-#define RCV_KEY_7 0x0006
+#define RCV_KEY_7 0x0002
 #define RCV_KEY_8 0x4000
 #define RCV_KEY_9 0x0001
 #define RCV_KEY_0 0x0008
