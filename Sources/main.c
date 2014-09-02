@@ -414,11 +414,12 @@ void  key_do(void)
 		key_timer++;
 		if (key_timer >= 4){								//key down time >= 40ms
 			key_value = 0x0002;
-			prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key down value to send buffer
-			last_key_value = key_value;
-			key_timer = 0;
+			if(key_value != last_key_value){
+				prepare_sndarm_pack(TOUCH_FOUR_KEY);			//save key down value to send buffer
+				last_key_value = key_value;
+				key_timer = 0;
+			}
 		}
-			
 	} else {
 		key_status = 0;										//key up
 		if (last_key_value == 0x0002){						//
@@ -537,7 +538,7 @@ void main(void)
 				if(rst_3s<200)							// 上电3秒 重起arm一次
 					rst_3s++;
 				rst_armt++;				
-				if((rst_armt%15) == 0)					// 收不到arm数据后每60秒
+				if((rst_armt%15) == 0)					// 收不到arm数据后每15 秒
 				{
 					prepare_sndarm_pack(Safe_ztai);		// 报告一次安防状态
 					//init7037(); 						// 初始化回声 消除芯片 ，每15秒初始化一次7037 测试初始化函数用，正常要屏蔽

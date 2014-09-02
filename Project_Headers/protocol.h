@@ -178,8 +178,8 @@ void  prepare_sndarm_pack(uchar rg)
 			break;
 		case TOUCH_FOUR_KEY:
 			Sndbuf[j][1] = 0x0A;					// length = (4+1+1+2+1+1)=10
-			Sndbuf[j][8] = key_value>>4;			// MSB
-			Sndbuf[j][9] = key_value&0x0F; 			// LSB
+			Sndbuf[j][8] = key_value>>8;			// MSB
+			Sndbuf[j][9] = key_value&0xFF; 			// LSB
 			Sndbuf[j][snd321] = 3;					// 可以发送3次			
 			break;
 		
