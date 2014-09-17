@@ -72,8 +72,6 @@ volatile uint last_key_value = 0xFFFF;
 volatile uchar key_timer = 0;
 volatile uchar key_status = 0;
 
-#define TOUCH_FOUR_KEY 0x18
-#define TOUCH_KEY 0x19
 
 #define RCV_KEY_RELEASE 0x0000
 #define RCV_KEY_1 0x0800

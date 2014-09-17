@@ -80,6 +80,18 @@ void volume_dwq_to( _UBYTE count)
 	volume_decrement(35);           	// make sure the volume has been decreased to zero 
 	volume_increment(count);
 } 
+ 
+void set_7037_mic_gain(_UBYTE vol)
+{
+	write7037byte(ADDRESS_ML7037_CR5, vol);
+	return;
+}
+
+void set_7037_transmit_gain(_UBYTE vol)
+{
+	write7037byte(ADDRESS_ML7037_CR3, vol);
+	return;
+}
 
 //=================================================================
 // 看 安防 电源 等是否有改变

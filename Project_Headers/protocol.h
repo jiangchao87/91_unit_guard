@@ -18,7 +18,9 @@
 #define    Dtmf_com       0x11 				// DTMF
 #define    Pwer_offkey    0x12 				// 按下关机开关
 #define    Check_Screen   0x17 				//
-#define    Key_4		  0x18 				//
+#define    TOUCH_FOUR_KEY 0x18
+#define    TOUCH_KEY      0x19
+
  
 // Arm-->从机  指令
 #define	   HOST_QUERY			0X01		// 查询
@@ -36,14 +38,21 @@
 #define	   HOST_EchoCoOn		0x14		// 回声消除开
 #define	   HOST_EchoCOff		0x15		// 回声消除关闭
 #define	   HOST_DvcType			0x16		// 呼叫设备类型
-
+#define	   HOST_MIC_VOLUME		0x20		// Mic增益
+#define	   HOST_TRANSMIT_GAIN	0x22		// 7037语音信号发送增益
 #define	   COMMAND_7037			0x21		// 
 
 
-extern uchar  volume;	
+extern uchar volume;	
+extern uchar volumeBF;
+extern uchar mic_volume;
+extern uchar mic_volumeBF;
+extern uchar transmit_gain;
 void volume_dwq_to( _UBYTE count);
 void reset_host(void);
 void get_current_time(void);
+void set_7037_mic_gain(_UBYTE vol);
+void set_7037_transmit_gain(_UBYTE vol);
 
 //=====================================================================
 // 电话模块发给单片机
@@ -273,6 +282,24 @@ void  respond2Host(void)
 				init7037(); 	
 			volumeBF = volume;
 			volume_dwq_to(Volv_lvel[volume][0]);	//      F5 F5 09 00 00 00 00 01 06 0E 00 FD 
+			break;
+			
+		case HOST_MIC_VOLUME:
+			prepare_sndarm_pack(Answer_zt);
+			mic_volume = rsvbufm[8];
+			if(((mic_volume>=0)&&(mic_volume<=0x0A))||
+					((mic_volume>=0x16)&&(mic_volume<=0x1F))){
+				set_7037_mic_gain(mic_volume);
+				mic_volumeBF = mic_volume;
+			}
+			break;
+			
+		case HOST_TRANSMIT_GAIN:
+			prepare_sndarm_pack(Answer_zt);
+			transmit_gain = rsvbufm[8];
+			if((transmit_gain >= 0)&&(transmit_gain <= 0xF)){
+				set_7037_transmit_gain(transmit_gain);
+			}
 			break;
 			
 		case HOST_DvcType:								// 呼叫设备类型  类型不同， MIC增益不同
